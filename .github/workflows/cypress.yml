@@ -11,7 +11,9 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest # Choose the OS to run on (Ubuntu, macOS, Windows)
-    
+    strategy:
+      matrix:
+        parallel_jobs : [1,2,3]
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -27,7 +29,9 @@ jobs:
         
     - name: Run Cypress tests
       uses: cypress-io/github-action@v6
-      # with:
+      with:
+        record: true
+        parallel: true
         # start: npm run start # Optional: if you need to start your app before tests
       env:
         CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }} # Optional: for Cypress Dashboard integration
