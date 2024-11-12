@@ -1,0 +1,33 @@
+name: Cypress Tests
+
+on:
+  push:
+    branches:
+      - main # Trigger the action on pushes to the main branch
+  pull_request:
+    branches:
+      - main # Trigger the action for PRs targeting the main branch
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest # Choose the OS to run on (Ubuntu, macOS, Windows)
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16' # Specify the Node.js version you're using
+    
+    - name: Install dependencies
+      run: |
+        npm install
+        
+    - name: Run Cypress tests
+      uses: cypress-io/github-action@v5
+      with:
+        start: npm run start # Optional: if you need to start your app before tests
+      env:
+        CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }} # Optional: for Cypress Dashboard integration
