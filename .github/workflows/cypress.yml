@@ -26,17 +26,11 @@ jobs:
     - name: Install dependencies
       run: |
         npm install
-    - name: Setup cypress env variables
-      run: |
-          echo "CYPRESS_RECORD_KEY=${{ secrets.CYPRESS_RECORD_KEY }}" >> $GITHUB_ENV
-          echo "CYPRESS_PROJECT_ID=${{ secrets.CYPRESS_PROJECT_ID }}" >> $GITHUB_ENV
         
     - name: Run Cypress tests
       uses: cypress-io/github-action@v6
       with:
-        record: true
+        start: npm run start
+        command: npm run cypress:run
         parallel: true
-        # start: npm run start # Optional: if you need to start your app before tests
-      env:
-        CYPRESS_RECORD_KEY: ${{secrets.CYPRESS_RECORD_KEY}}
-        CYPRESS_PROJECT_ID: ${{secrets.CYPRESS_PROJECT_ID}}
+        group: parallel-tests
