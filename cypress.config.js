@@ -4,8 +4,10 @@ module.exports = defineConfig({
 
   defaultCommandTimeout: 4000,
   e2e: {
+    projectId: 'CypressAutomation',
     setupNodeEvents(on, config) {
       on('file:preprocessor', tagify(config));
+
     },
     // baseUrl: "https://ultimateqa.com/automation",
     baseUrl: "https://automationteststore.com",
