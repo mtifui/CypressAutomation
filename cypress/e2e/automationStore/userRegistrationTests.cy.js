@@ -1,10 +1,10 @@
 
-import { urls } from "../constants/urls"
+import { urls } from "../../constants/urls"
 import { createAccountPage } from "../pages/automationStoreElements";
 import { loginPage } from "../pages/automationStoreElements";
 
 const counter = Math.floor((Math.random() * 1000)) + 1
-describe(['register'], 'Cheks the registration option', () => {
+describe(['smoke'], 'Cheks the registration option', () => {
     it('checks that a new user can register when using all valid data', () => {
         cy.visit(urls.accountLoginPage)
             .get(loginPage.pageTitle)

@@ -31,5 +31,9 @@ jobs:
       uses: cypress-io/github-action@v6
       with:
         command: npm run cypress:run
+        spec: 'cypress/e2e/automationStore/*.cy.js'
         parallel: true
         group: parallel-tests
+        browser: chrome
+      env:
+        CYPRESS_INCLUDE_TAGS: 'smoke'

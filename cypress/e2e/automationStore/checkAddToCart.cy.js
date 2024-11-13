@@ -1,7 +1,7 @@
 
-import { validUser } from "../constants/credentials";
+import { validUser } from "../../constants/credentials";
 import { accountPage } from "../pages/automationStoreElements";
-import { options } from "../constants/categoryOptions";
+import { options } from "../../constants/categoryOptions";
 import "cypress-real-events/support";
 import { categoriesNavigationBar } from "../pages/automationStoreElements";
 

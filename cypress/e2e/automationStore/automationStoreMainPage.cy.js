@@ -3,7 +3,7 @@ import { mainPage } from "../pages/automationStoreElements";
 import { accountPage } from "../pages/automationStoreElements";
 import { errorMessages } from "../constants/notificationAndMessages";
 import { expectedText } from "../constants/notificationAndMessages"
-import { validUser } from "../constants/credentials";
+import { validUser } from "../../constants/credentials";
 
 describe(['smoke'], 'Check the main page of the store', () => {
 
