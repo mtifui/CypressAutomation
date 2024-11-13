@@ -1,10 +1,9 @@
 
 import { validUser } from "../../constants/credentials";
 import { accountPage } from "../../pages/automationStoreElements";
-import { options } from "../..constants/categoryOptions";
+import { options } from "../../constants/categoryOptions"
 import "cypress-real-events/support";
 import { categoriesNavigationBar } from "../../pages/automationStoreElements";
-import { validUser } from "../../constants/credentials";
 
 describe('Checks that you are able to add to cart', () => {
 
