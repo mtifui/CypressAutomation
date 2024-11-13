@@ -24,7 +24,7 @@
 // -- This will overwrite an existing command --
 // Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
 
-import { loginPage } from '../pages/automationStoreElements';
+import { loginPage } from '../pages/automationStoreElements.js';
 import { urls } from '../constants/urls';
 
 Cypress.Commands.add('goToTheBigPage', () => {
