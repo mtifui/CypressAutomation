@@ -26,7 +26,7 @@ jobs:
     - name: Install dependencies
       run: |
         npm install
-        
+
     - name: Run Cypress tests
       uses: cypress-io/github-action@v6
       with:
@@ -38,11 +38,13 @@ jobs:
       env:
         CYPRESS_INCLUDE_TAGS: 'smoke'
         AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
+
     - name: Upload Cypress Test Results
       uses: actions/upload-artifact@v3
       with:
         name: cypress-results
         path: cypress/results
+        
     - name: Test Reporter
       uses: dorny/test-reporter@v1
       with:
