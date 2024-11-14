@@ -39,7 +39,7 @@ jobs:
         CYPRESS_INCLUDE_TAGS: 'smoke'
         AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
     - name: Upload Cypress Test Results
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: cypress-results
         path: cypress/results
