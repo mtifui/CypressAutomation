@@ -38,3 +38,10 @@ jobs:
       env:
         CYPRESS_INCLUDE_TAGS: 'smoke'
         AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
+    - name: Test Reporter
+      uses: dorny/test-reporter@v1
+      with:
+        name: Cypress Tests
+        path: cypress/results/*.xml
+        reporter: junit
+        fail-on-error: true
