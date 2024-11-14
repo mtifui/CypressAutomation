@@ -78,3 +78,24 @@ Cypress.Commands.add('removeProductFromCart', (productId) => {
     })
 
 })
+
+Cypress.Commands.add('addProductToWishlist', (productId) => {
+    return cy.request({
+        method: 'POST',
+        url: urls.addToWishlist(productId)
+    })
+})
+
+Cypress.Commands.add('getWishlist', () => {
+    return cy.request({
+        method: 'GET',
+        url: urls.getWishlist
+    })
+})
+
+Cypress.Commands.add('removeItemFromWishlist', (productId) => {
+    return cy.request({
+        method: 'POST',
+        url: urls.removedFromWishlist(productId)
+    })
+})

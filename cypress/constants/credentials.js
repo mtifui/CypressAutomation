@@ -1,4 +1,4 @@
 export const validUser = {
     userName: "mirelat",
-    password: "parolamea1"
-}
+    password: Cypress.env('AUTOMATION_STORE_PASSWORD')
+};

@@ -1,7 +1,12 @@
 const { defineConfig } = require("cypress");
 const { tagify } = require("cypress-tags");
-module.exports = defineConfig({
+require('dotenv').config({ path: './credentials.env' });
 
+module.exports = defineConfig({
+  env: {
+    AUTOMATION_STORE_PASSWORD: process.env.AUTOMATION_STORE_PASSWORD,
+    INCLUDE_TAGS: "smoke, regression"
+  },
   defaultCommandTimeout: 4000,
   e2e: {
     projectId: 'CypressAutomation',
@@ -12,8 +17,5 @@ module.exports = defineConfig({
     // baseUrl: "https://ultimateqa.com/automation",
     baseUrl: "https://automationteststore.com",
 
-  },
-  env: {
-    INCLUDE_TAGS: "smoke, regression"
   }
 })
