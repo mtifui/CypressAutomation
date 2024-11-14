@@ -38,10 +38,15 @@ jobs:
       env:
         CYPRESS_INCLUDE_TAGS: 'smoke'
         AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
+    - name: Upload Cypress Test Results
+      uses: actions/upload-artifact@v2
+      with:
+        name: cypress-results
+        path: cypress/results
     - name: Test Reporter
-      uses: dorny/test-reporter@v1.9.1
+      uses: dorny/test-reporter@v1
       with:
         name: Cypress Tests
-        path: cypress/results/*.xml
-        reporter: junit
+        path: cypress/results/*.json
+        reporter: mocha-json
         fail-on-error: true

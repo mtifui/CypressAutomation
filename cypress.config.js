@@ -3,6 +3,13 @@ const { tagify } = require("cypress-tags");
 require('dotenv').config({ path: './credentials.env' });
 
 module.exports = defineConfig({
+  reporter: 'cypress-mochawesome-reporter',
+  reporterOptions: {
+    reportDir: 'cypress/results',
+    overwrite: false,
+    html: true,
+    json: true,
+  },
   env: {
     AUTOMATION_STORE_PASSWORD: process.env.AUTOMATION_STORE_PASSWORD,
     INCLUDE_TAGS: "smoke, regression"
