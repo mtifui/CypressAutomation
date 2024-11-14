@@ -44,11 +44,11 @@ jobs:
       with:
         name: cypress-results
         path: cypress/results
-        
+
     - name: Test Reporter
       uses: dorny/test-reporter@v1
       with:
         name: Cypress Tests
-        path: cypress/results/*.json
+        path: cypress/results/.jsons/*.json
         reporter: mocha-json
         fail-on-error: true
