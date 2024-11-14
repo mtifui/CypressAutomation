@@ -43,7 +43,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: cypress-results
-        path: cypress/results
+        path: cypress/results/.jsons/*.json
 
     - name: Test Reporter
       uses: dorny/test-reporter@v1
