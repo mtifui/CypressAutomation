@@ -44,7 +44,9 @@ jobs:
       with:
         name: cypress-results
         path: cypress/results/.jsons/*.json
-
+    - name: List Mochawesome Results
+      run: ls -R cypress/results
+      
     - name: Test Reporter
       uses: dorny/test-reporter@v1
       with:
@@ -52,3 +54,4 @@ jobs:
         path: cypress/results/.jsons/*.json
         reporter: mocha-json
         fail-on-error: true
+    
