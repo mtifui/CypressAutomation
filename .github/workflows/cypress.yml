@@ -38,20 +38,23 @@ jobs:
       env:
         CYPRESS_INCLUDE_TAGS: 'smoke'
         AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
+    - name: Debug List Mochawesome Results
+      run: ls -R cypress/results/.jsons || echo "No results found"
+
+    - name: Merge Mochawesome Reports
+      run: npm run merge-reports
 
     - name: Upload Cypress Test Results
       uses: actions/upload-artifact@v3
       with:
         name: cypress-results
-        path: cypress/results/.jsons/*.json
-    - name: List Mochawesome Results
-      run: ls -R cypress/results
-      
+        path: cypress/results/.jsons/**/*.json
+
     - name: Test Reporter
       uses: dorny/test-reporter@v1
       with:
         name: Cypress Tests
-        path: cypress/results/.jsons/*.json
+        path: cypress/results/.jsons/merged-report.json
         reporter: mocha-json
         fail-on-error: true
     
