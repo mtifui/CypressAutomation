@@ -10,10 +10,7 @@ on:
 
 jobs:
   cypress-run:
-    runs-on: ubuntu-latest # Choose the OS to run on (Ubuntu, macOS, Windows)
-    strategy:
-      matrix:
-        parallel_jobs : [1,2,3]
+    runs-on: ubuntu-latest # OS to run on (Ubuntu, macOS, Windows)
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -21,11 +18,10 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '16' # Specify the Node.js version you're using
+        node-version: '16' # Specify Node.js version
     
     - name: Install dependencies
-      run: |
-        npm install
+      run: npm install
 
     - name: Run Cypress tests
       uses: cypress-io/github-action@v6
@@ -38,17 +34,17 @@ jobs:
       env:
         CYPRESS_INCLUDE_TAGS: 'smoke'
         AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
-    - name: Generate Mochawesome Report
-      run: npx marge cypress/results/*.json --reportDir cypress/results
-  
+
+    - name: Verify JSON Report Files
+      run: ls -al cypress/results
+
     - name: Merge Mochawesome Reports
       run: |
         npx mochawesome-merge cypress/results/*.json > cypress/results/merged.json
         npx marge cypress/results/merged.json --reportDir cypress/results
-      
+
     - name: Upload Test Reports
       uses: actions/upload-artifact@v3
       with:
-          name: Cypress Test Report
-          path: cypress/results
-    
+        name: Cypress Test Report
+        path: cypress/results
