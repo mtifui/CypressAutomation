@@ -9,6 +9,7 @@ module.exports = defineConfig({
     overwrite: false,
     html: true,
     json: true,
+    charts: true,
   },
   env: {
     AUTOMATION_STORE_PASSWORD: process.env.AUTOMATION_STORE_PASSWORD,

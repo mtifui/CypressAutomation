@@ -3,23 +3,23 @@ name: Cypress Tests
 on:
   push:
     branches:
-      - main # Trigger the action on pushes to the main branch
+      - main
   pull_request:
     branches:
-      - main # Trigger the action for PRs targeting the main branch
+      - main
 
 jobs:
   cypress-run:
-    runs-on: ubuntu-latest # OS to run on (Ubuntu, macOS, Windows)
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
-      
+
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '16' # Specify Node.js version
-    
+        node-version: '16'
+
     - name: Install dependencies
       run: npm install
 
@@ -35,16 +35,11 @@ jobs:
         CYPRESS_INCLUDE_TAGS: 'smoke'
         AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
 
-    - name: Verify JSON Report Files
-      run: ls -al cypress/results
-
-    - name: Merge Mochawesome Reports
-      run: |
-        npx mochawesome-merge cypress/results/*.json > cypress/results/merged.json
-        npx marge cypress/results/merged.json --reportDir cypress/results
+    - name: Verify Report Files
+      run: ls -R cypress/results
 
     - name: Upload Test Reports
       uses: actions/upload-artifact@v3
       with:
         name: Cypress Test Report
-        path: cypress/results
+        path: cypress/results/*.html
