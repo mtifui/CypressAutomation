@@ -39,11 +39,16 @@ jobs:
         CYPRESS_INCLUDE_TAGS: 'smoke'
         AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
     - name: Generate Mochawesome Report
-      run: npx marge cypress/reports/*.json --reportDir cypress/reports
-
+      run: npx marge cypress/results/*.json --reportDir cypress/results
+  
+    - name: Merge Mochawesome Reports
+      run: |
+        npx mochawesome-merge cypress/results/*.json > cypress/results/merged.json
+        npx marge cypress/results/merged.json --reportDir cypress/results
+      
     - name: Upload Test Reports
       uses: actions/upload-artifact@v3
       with:
           name: Cypress Test Report
-          path: cypress/reports
+          path: cypress/results
     
