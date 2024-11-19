@@ -38,11 +38,14 @@ jobs:
     - name: Verify Report Files
       run: ls -R cypress/results
 
+    - name: Generate Mochawesome Report
+      run: npx marge cypress/results/.jsons/*.json --reportDir cypress/results
+
     - name: Upload Test Reports
       uses: actions/upload-artifact@v3
       with:
         name: Cypress Test Report
-        path: cypress/results/.jsons/*.json
+        path: cypress/results/.jsons/mochawesome.json
 
     - name: Upload HTML Test Reports
       uses: actions/upload-artifact@v3
