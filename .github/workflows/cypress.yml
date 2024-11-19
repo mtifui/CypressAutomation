@@ -42,4 +42,15 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: Cypress Test Report
-        path: cypress/results/*.json
+        path: cypress/results/.jsons/*.json
+
+    - name: Upload HTML Test Reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: Cypress Test HTML Report
+        path: cypress/results/.jsons/*.html
+
+    - name: Verify Generated Reports
+      run: ls -R cypress/results
+      
+    
