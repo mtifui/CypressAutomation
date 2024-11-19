@@ -42,4 +42,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: Cypress Test Report
-        path: cypress/results/*.html
+        path: cypress/results/*.json
