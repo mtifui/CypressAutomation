@@ -22,17 +22,40 @@ jobs:
     
     - name: Install dependencies
       run: npm install
-        
-    - name: Run Cypress tests
+
+    - name: Run Smoke Tests
       uses: cypress-io/github-action@v6
       with:
         command: npm run cypress:run
         spec: 'cypress/e2e/automationStore/*.cy.js'
         parallel: true
-        group: parallel-tests
+        group: smoke-tests
         browser: chrome
       env:
         CYPRESS_INCLUDE_TAGS: 'smoke'
+        AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
+    
+    - name: Run Regression Tests
+      uses: cypress-io/github-action@v6
+      with:
+        command: npm run cypress:run
+        spec: 'cypress/e2e/automationStore/*.cy.js'
+        parallel: true
+        group: regression-tests
+        browser: chrome
+      env:
+        CYPRESS_INCLUDE_TAGS: 'regression'
+        AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
+    
+    - name: Run Untagged Tests
+      uses: cypress-io/github-action@v6
+      with:
+        command: npm run cypress:run
+        spec: 'cypress/e2e/automationStore/*.cy.js'
+        parallel: true
+        group: untagged-tests
+        browser: chrome
+      env:
         AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
     
     - name: List Mochawesome Results
