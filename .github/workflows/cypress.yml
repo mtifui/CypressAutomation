@@ -14,15 +14,15 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
-
+      
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '16'
-
+    
     - name: Install dependencies
       run: npm install
-
+        
     - name: Run Cypress tests
       uses: cypress-io/github-action@v6
       with:
@@ -34,26 +34,20 @@ jobs:
       env:
         CYPRESS_INCLUDE_TAGS: 'smoke'
         AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
-
-    - name: Verify Report Files
-      run: ls -R cypress/results
-
-    - name: Generate Mochawesome Report
-      run: npx marge cypress/results/.jsons/*.json --reportDir cypress/results
-
-    - name: Upload Test Reports
-      uses: actions/upload-artifact@v3
-      with:
-        name: Cypress Test Report
-        path: cypress/results/.jsons/mochawesome.json
-
-    - name: Upload HTML Test Reports
-      uses: actions/upload-artifact@v3
-      with:
-        name: Cypress Test HTML Report
-        path: cypress/results/.jsons/*.html
-
-    - name: Verify Generated Reports
-      run: ls -R cypress/results
-      
     
+    - name: List Mochawesome Results
+      run: ls -R cypress/results
+    
+    - name: Upload Cypress Test Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: cypress-results
+        path: cypress/results/.jsons/*.json
+    
+    - name: Test Reporter
+      uses: dorny/test-reporter@v1
+      with:
+        name: Cypress Tests
+        path: cypress/results/.jsons/*.json
+        reporter: mocha-json
+        fail-on-error: true

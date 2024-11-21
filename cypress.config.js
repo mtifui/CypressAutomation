@@ -9,7 +9,6 @@ module.exports = defineConfig({
     overwrite: false,
     html: true,
     json: true,
-    charts: true,
   },
   env: {
     AUTOMATION_STORE_PASSWORD: process.env.AUTOMATION_STORE_PASSWORD,
@@ -20,7 +19,8 @@ module.exports = defineConfig({
     projectId: 'CypressAutomation',
     setupNodeEvents(on, config) {
       on('file:preprocessor', tagify(config));
-
+      require('cypress-mochawesome-reporter/plugin')(on);
+      return config;
     },
     // baseUrl: "https://ultimateqa.com/automation",
     baseUrl: "https://automationteststore.com",
