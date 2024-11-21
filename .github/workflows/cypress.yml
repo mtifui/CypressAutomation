@@ -41,13 +41,5 @@ jobs:
     - name: Upload Cypress Test Results
       uses: actions/upload-artifact@v3
       with:
-        name: cypress-results
-        path: cypress/results/.jsons/*.json
-    
-    - name: Test Reporter
-      uses: dorny/test-reporter@v1
-      with:
-        name: Cypress Tests
-        path: cypress/results/.jsons/*.json
-        reporter: mocha-json
-        fail-on-error: true
+        name: Cypress-HTML-Report
+        path: cypress/results/index.html
