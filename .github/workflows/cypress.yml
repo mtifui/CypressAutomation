@@ -27,7 +27,7 @@ jobs:
       #   run: npm ci || npm install --no-audit --no-fund
 
       - name: Run Cypress (JUnit only)
-        run: npm run test:e2e
+        run: npm run cypress:run
         env:
           CYPRESS_video: "false"
           CYPRESS_screenshotOnRunFailure: "false"
