@@ -19,25 +19,25 @@ jobs:
           node-version: 20
           cache: npm
 
+      # ✅ Either keep this (after you commit the updated lockfile) ...
       - name: Install deps
         run: npm ci
+      # ...or temporarily use:
+      # - name: Install deps
+      #   run: npm ci || npm install --no-audit --no-fund
 
-      # Run Cypress (JUnit XML will be written to cypress/reports/results-[hash].xml)
       - name: Run Cypress (JUnit only)
         run: npm run test:e2e
         env:
-          # These two are optional overrides if you want to force-disable visuals at runtime
           CYPRESS_video: "false"
           CYPRESS_screenshotOnRunFailure: "false"
 
-      # Upload ONLY the JUnit XML so you can download from the Actions UI if needed
       - name: Upload JUnit reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: junit-${{ github.run_number }}
-          path: |
-            cypress/reports/results-*.xml
+          path: cypress/reports/results-*.xml
           retention-days: 14
 
       - name: Setup Python (for TRCLI)
@@ -50,18 +50,26 @@ jobs:
         if: always()
         run: pip install --upgrade pip trcli
 
-      # Parse & upload JUnit to TestRail.
-      # Uses your trcli-config.yml (must be in repo) and your TESTRAIL_* secrets.
       - name: Upload results to TestRail
         if: always()
         env:
           TESTRAIL_USER: ${{ secrets.TESTRAIL_USER }}
           TESTRAIL_PASS: ${{ secrets.TESTRAIL_PASS }}
         run: |
-          # If your config file isn't in the repo root, change the path below.
-          trcli -y -c trcli-config.yml parse_junit \
+          # Guard: skip TRCLI gracefully if no JUnit files (e.g. install failed)
+          shopt -s nullglob
+          files=(cypress/reports/results-*.xml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No JUnit XML found; skipping TRCLI upload."
+            exit 0
+          fi
+
+          trcli -y -c trcli-config.yml \
+            -h "https://endavatesttool.testrail.io" \
+            --project "TestCaseCreation" \
             --username "$TESTRAIL_USER" \
             --password "$TESTRAIL_PASS" \
+            parse_junit \
             --title "Cypress E2E #${{ github.run_number }} (ref: ${{ github.ref_name }})" \
             --run-description "GitHub Actions: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             -f "cypress/reports/results-*.xml" \
