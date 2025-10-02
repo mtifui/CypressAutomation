@@ -1,0 +1,5 @@
+host: https://endavatesttool.testrail.io/
+username: ${{ secrets.TESTRAIL_USER }}
+password: ${{ secrets.TESTRAIL_PASS }}
+project: TestCaseCreation
+title: Cypress Automated Test Run (Code-first)

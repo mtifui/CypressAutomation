@@ -3,12 +3,10 @@ const { tagify } = require("cypress-tags");
 require('dotenv').config({ path: './credentials.env' });
 
 module.exports = defineConfig({
-  reporter: 'cypress-mochawesome-reporter',
+  reporter: "junit",
   reporterOptions: {
-    reportDir: 'cypress/results',
-    overwrite: false,
-    html: true,
-    json: true,
+    mochaFile: "cypress/reports/results-[hash].xml", // one file per spec
+    toConsole: true
   },
   env: {
     AUTOMATION_STORE_PASSWORD: process.env.AUTOMATION_STORE_PASSWORD,

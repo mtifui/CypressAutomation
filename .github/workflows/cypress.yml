@@ -1,68 +1,68 @@
-name: Cypress Tests
+# .github/workflows/e2e-trcli.yml
+name: e2e + TestRail
 
 on:
   push:
-    branches:
-      - main
   pull_request:
-    branches:
-      - main
 
 jobs:
-  cypress-run:
+  cypress-trcli:
     runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '16'
-    
-    - name: Install dependencies
-      run: npm install
 
-    - name: Run Smoke Tests
-      uses: cypress-io/github-action@v6
-      with:
-        command: npm run cypress:run
-        spec: 'cypress/e2e/automationStore/*.cy.js'
-        parallel: true
-        group: smoke-tests
-        browser: chrome
-      env:
-        CYPRESS_INCLUDE_TAGS: 'smoke'
-        AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
-    
-    - name: Run Regression Tests
-      uses: cypress-io/github-action@v6
-      with:
-        command: npm run cypress:run
-        spec: 'cypress/e2e/automationStore/*.cy.js'
-        parallel: true
-        group: regression-tests
-        browser: chrome
-      env:
-        CYPRESS_INCLUDE_TAGS: 'regression'
-        AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
-    
-    - name: Run Untagged Tests
-      uses: cypress-io/github-action@v6
-      with:
-        command: npm run cypress:run
-        spec: 'cypress/e2e/automationStore/*.cy.js'
-        parallel: true
-        group: untagged-tests
-        browser: chrome
-      env:
-        AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
-    
-    - name: List Mochawesome Results
-      run: ls -R cypress/results
-    
-    - name: Upload Cypress Test Results
-      uses: actions/upload-artifact@v3
-      with:
-        name: Cypress-HTML-Report
-        path: cypress/results
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      # Run Cypress (JUnit XML will be written to cypress/reports/results-[hash].xml)
+      - name: Run Cypress (JUnit only)
+        run: npm run test:e2e
+        env:
+          # These two are optional overrides if you want to force-disable visuals at runtime
+          CYPRESS_video: "false"
+          CYPRESS_screenshotOnRunFailure: "false"
+
+      # Upload ONLY the JUnit XML so you can download from the Actions UI if needed
+      - name: Upload JUnit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-${{ github.run_number }}
+          path: |
+            cypress/reports/results-*.xml
+          retention-days: 14
+
+      - name: Setup Python (for TRCLI)
+        if: always()
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install TRCLI
+        if: always()
+        run: pip install --upgrade pip trcli
+
+      # Parse & upload JUnit to TestRail.
+      # Uses your trcli-config.yml (must be in repo) and your TESTRAIL_* secrets.
+      - name: Upload results to TestRail
+        if: always()
+        env:
+          TESTRAIL_USER: ${{ secrets.TESTRAIL_USER }}
+          TESTRAIL_PASS: ${{ secrets.TESTRAIL_PASS }}
+        run: |
+          # If your config file isn't in the repo root, change the path below.
+          trcli -y -c trcli-config.yml parse_junit \
+            --username "$TESTRAIL_USER" \
+            --password "$TESTRAIL_PASS" \
+            --title "Cypress E2E #${{ github.run_number }} (ref: ${{ github.ref_name }})" \
+            --run-description "GitHub Actions: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            -f "cypress/reports/results-*.xml" \
+            --close-run
