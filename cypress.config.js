@@ -17,7 +17,6 @@ module.exports = defineConfig({
     projectId: 'CypressAutomation',
     setupNodeEvents(on, config) {
       on('file:preprocessor', tagify(config));
-      require('cypress-mochawesome-reporter/plugin')(on);
       return config;
     },
     // baseUrl: "https://ultimateqa.com/automation",
