@@ -60,8 +60,13 @@ jobs:
         if: always()
         uses: mikepenz/action-junit-report@v5
         with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           report_paths: "cypress/reports/results-*.xml"
-        commit: ${{ github.sha }}
+          check_name: "Cypress JUnit"
+          detailed_summary: true
+          include_passed: false
+        # annotate_only: true       # (optional) only annotations, don’t fail the job
+        # fail_on_failure: false    # (optional) keep job green even if tests failed
 
       - name: Upload results to TestRail
         if: always()

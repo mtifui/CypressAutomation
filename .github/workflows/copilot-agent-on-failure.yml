@@ -1,5 +1,5 @@
+name: Create Copilot Agent task
 
-name: Copilot agent: analyze failed Cypress run
 on:
   workflow_run:
     workflows: ["e2e + TestRail"]   # must match your CI workflow's 'name'
