@@ -50,6 +50,19 @@ jobs:
         if: always()
         run: pip install --upgrade pip trcli
 
+      - name: Summarize tests in job summary
+        if: always()
+        uses: test-summary/action@v2
+        with:
+          paths: "cypress/reports/results-*.xml"
+
+      - name: Annotate PR with JUnit details
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: "cypress/reports/results-*.xml"
+        commit: ${{ github.sha }}
+
       - name: Upload results to TestRail
         if: always()
         env:
@@ -74,3 +87,6 @@ jobs:
             --run-description "GitHub Actions: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             -f "cypress/reports/results-*.xml" \
             --close-run
+
+     
+    
