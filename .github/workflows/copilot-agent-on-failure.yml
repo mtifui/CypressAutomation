@@ -5,6 +5,11 @@ on:
     workflows: ["e2e + TestRail"]   # must match your CI workflow's 'name'
     types: [completed]
 
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Existing CI run ID to analyze (optional). If empty, we'll use the latest failed 'e2e + TestRail' run."
+        required: false
 jobs:
   delegate:
     if: ${{ github.event.workflow_run.conclusion != 'success' }}

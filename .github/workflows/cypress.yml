@@ -5,6 +5,11 @@ on:
   push:
   pull_request:
 
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Existing CI run ID to analyze (optional). If empty, we'll use the latest failed 'e2e + TestRail' run."
+        required: false
 jobs:
   cypress-trcli:
     runs-on: ubuntu-latest
