@@ -12,7 +12,7 @@ on:
 
 jobs:
   delegate:
-    # run automatically only when CI failed; always allow manual
+    # auto-run only on failures; always allow manual trigger
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion != 'success' }}
     runs-on: ubuntu-latest
     permissions:
@@ -20,11 +20,18 @@ jobs:
       pull-requests: write
       actions: read
       id-token: write
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # <-- auth for gh (no gh auth login needed)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # 🔐 Authenticate the GitHub CLI with a user PAT (the owner must have a Copilot seat)
+      - name: Authenticate gh (OAuth)
+        env:
+          COPILOT_OAUTH_TOKEN: ${{ secrets.COPILOT_OAUTH_TOKEN }}  # <-- your PAT/fine-grained token
+        run: |
+          # Ensure gh uses OAuth token, not the workflow token
+          unset GH_TOKEN
+          echo "$COPILOT_OAUTH_TOKEN" | gh auth login --with-token
 
       # Auto mode: take run id from triggering event
       - name: Resolve RUN_ID (auto)
