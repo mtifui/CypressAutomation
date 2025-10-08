@@ -1,37 +1,57 @@
-name: Create Copilot Agent task
+name: "Create Copilot Agent task"
 
 on:
   workflow_run:
-    workflows: ["e2e + TestRail"]   # must match your CI workflow's 'name'
+    workflows: ["e2e + TestRail"]
     types: [completed]
   workflow_dispatch:
     inputs:
       run_id:
-        description: "Existing CI run ID to analyze (optional). If empty, we'll use the latest failed 'e2e + TestRail' run."
+        description: "CI run ID to analyze (optional)"
         required: false
 
 jobs:
   delegate:
-    if: ${{ github.event.workflow_run.conclusion != 'success' }}
+    # run automatically only when CI failed; always allow manual
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion != 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
       actions: read
       id-token: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # <-- auth for gh (no gh auth login needed)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install GitHub CLI
-        uses: cli/cli-action@v2
+      # Auto mode: take run id from triggering event
+      - name: Resolve RUN_ID (auto)
+        if: ${{ github.event_name == 'workflow_run' }}
+        run: echo "RUN_ID=${{ github.event.workflow_run.id }}" >> $GITHUB_ENV
 
-      - name: Auth GH CLI
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      # Manual mode: use input run_id or find latest failed
+      - name: Resolve RUN_ID (manual)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          if [ -n "${{ github.event.inputs.run_id }}" ]; then
+            echo "RUN_ID=${{ github.event.inputs.run_id }}" >> $GITHUB_ENV
+          else
+            LATEST_FAILED=$(gh run list \
+              --workflow "e2e + TestRail" \
+              --json databaseId,conclusion,status \
+              -q '.[] | select(.conclusion=="failure" and .status=="completed") | .databaseId' \
+              | head -n1)
+            if [ -z "$LATEST_FAILED" ]; then
+              echo "No failed 'e2e + TestRail' runs found."; exit 1
+            fi
+            echo "RUN_ID=$LATEST_FAILED" >> $GITHUB_ENV
+          fi
 
       - name: Ask Copilot to analyze and propose a fix
         env:
-          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ID: ${{ env.RUN_ID }}
           REPO: ${{ github.repository }}
         run: |
           gh agent-task create "
@@ -39,9 +59,9 @@ jobs:
           Goals:
           - Download artifacts, read JUnit XML: cypress/reports/results-*.xml
           - Cluster failures by spec and test title; identify root cause(s)
-          - Reproduce locally in your environment (npm ci; npm run cypress:run)
+          - Reproduce locally (npm ci; npm run cypress:run)
           - Implement the smallest safe fix in code/tests
-          - Open a **draft** PR from branch 'fix/agent-${RUN_ID}' with:
+          - Open a DRAFT PR from 'fix/agent-${RUN_ID}' with:
             * RCA summary
             * Files changed and rationale
             * How I reproduced & how to run locally
