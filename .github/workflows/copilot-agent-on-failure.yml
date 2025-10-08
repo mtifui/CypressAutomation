@@ -24,7 +24,7 @@ jobs:
       - name: Auth GH CLI
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      - name: Ask Copilot to analyze & propose a fix
+      - name: Ask Copilot to analyze and propose a fix
         env:
           RUN_ID: ${{ github.event.workflow_run.id }}
           REPO: ${{ github.repository }}
