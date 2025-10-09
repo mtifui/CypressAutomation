@@ -75,6 +75,7 @@ jobs:
             echo "::error::COPILOT_OAUTH_TOKEN is empty. Add it in Settings → Secrets → Actions."; exit 1
           fi
           echo "$COPILOT_OAUTH_TOKEN" | gh auth login --hostname github.com --with-token
+          echo "creating agent task"
           gh agent-task create "
           Analyze the latest failed workflow run (ID: ${RUN_ID}) for ${REPO}.
           Goals:
