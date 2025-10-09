@@ -76,6 +76,7 @@ jobs:
           fi
           echo "$COPILOT_OAUTH_TOKEN" | gh auth login --hostname github.com --with-token
           echo "creating agent task"
+          gh auth status
           gh agent-task create "
           Analyze the latest failed workflow run (ID: ${RUN_ID}) for ${REPO}.
           Goals:
