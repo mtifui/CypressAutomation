@@ -12,28 +12,46 @@ on:
 
 jobs:
   delegate:
-    # auto-run only on failures; always allow manual trigger
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion != 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
       actions: read
-      issues: write        # <-- needed to create/assign an Issue
       id-token: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Resolve RUN_ID for auto/manual modes
+      # 🔐 Authenticate gh with a user token (PAT FG or Classic)
+      - name: Authenticate gh (OAuth)
+        env:
+          COPILOT_OAUTH_TOKEN: ${{ secrets.COPILOT_OAUTH_TOKEN }}
+        run: |
+          set -e
+          if [ -z "$COPILOT_OAUTH_TOKEN" ]; then
+            echo "::error::COPILOT_OAUTH_TOKEN is empty. Add it in Settings → Secrets → Actions."; exit 1
+          fi
+          # make sure gh prefers this OAuth token rather than GH_TOKEN
+          gh auth logout --hostname github.com || true
+          unset GH_TOKEN
+          echo "$COPILOT_OAUTH_TOKEN" | gh auth login --hostname github.com --with-token
+
+      # ✅ Prove we are logged in as a user (must say 'Logged in to github.com as <you>')
+      - name: Verify gh auth
+        run: |
+          gh --version
+          gh auth status --hostname github.com
+
+      # Auto mode: take run id from triggering event
       - name: Resolve RUN_ID (auto)
         if: ${{ github.event_name == 'workflow_run' }}
         run: echo "RUN_ID=${{ github.event.workflow_run.id }}" >> $GITHUB_ENV
 
+      # Manual mode: use input run_id or find latest failed
       - name: Resolve RUN_ID (manual)
         if: ${{ github.event_name == 'workflow_dispatch' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -n "${{ github.event.inputs.run_id }}" ]; then
             echo "RUN_ID=${{ github.event.inputs.run_id }}" >> $GITHUB_ENV
@@ -44,77 +62,26 @@ jobs:
               -q '.[] | select(.conclusion=="failure" and .status=="completed") | .databaseId' \
               | head -n1)
             if [ -z "$LATEST_FAILED" ]; then
-              echo "::error::No failed 'e2e + TestRail' runs found."; exit 1
+              echo "::error::No failed 'e2e + TestRail' runs found to analyze."
+              exit 1
             fi
             echo "RUN_ID=$LATEST_FAILED" >> $GITHUB_ENV
           fi
 
-      # Create (or reuse) an Issue and assign Copilot to start the agent
-      - name: Start Copilot by assigning an Issue
+      - name: Ask Copilot to analyze and propose a fix
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO_FULL: ${{ github.repository }}
           RUN_ID: ${{ env.RUN_ID }}
+          REPO: ${{ github.repository }}
         run: |
-          set -euo pipefail
-          OWNER="${REPO_FULL%/*}"
-          REPO="${REPO_FULL#*/}"
-
-          # Find coding agent actor id for this repo
-          COPILOT_ID=$(gh api graphql -f query='
-            query($owner:String!, $name:String!) {
-              repository(owner:$owner, name:$name) {
-                suggestedActors(capabilities:[CAN_BE_ASSIGNED], first:100) {
-                  nodes { login __typename ... on Bot { id } ... on User { id } }
-                }
-              }
-            }' -F owner="$OWNER" -F name="$REPO" \
-            --jq '.data.repository.suggestedActors.nodes[] | select(.login=="copilot-swe-agent") | .id')
-
-          if [ -z "${COPILOT_ID:-}" ]; then
-            echo "::error::Copilot coding agent not enabled for this repo/org (copilot-swe-agent not found)."
-            exit 1
-          fi
-
-          RUN_URL="https://github.com/${OWNER}/${REPO}/actions/runs/${RUN_ID}"
-          TITLE="Agent task: analyze failed run ${RUN_ID} and propose a fix"
-          BODY=$(cat <<'EOF'
-          Analyze the failed CI run and propose a minimal safe fix.
-
-          **Inputs**
-          - CI run: RUN_URL
-          - Artifacts: download from the run page (JUnit XML at `cypress/reports/results-*.xml`)
-
-          **Instructions**
-          - Cluster failures by spec/test title from JUnit XML.
-          - Reproduce locally (Node 22: `npm ci` ; `npm run cypress:run`).
-          - Implement smallest safe fix (selectors/timeouts only when justified).
-          - Open a **DRAFT** PR from `fix/agent-RUN_ID` with:
-            - RCA summary
-            - Files changed & rationale
-            - Repro steps (before/after)
-          - Follow `.github/copilot-instructions.md` and `AGENTS.md`.
-          EOF
-          )
-          BODY="${BODY/RUN_URL/$RUN_URL}"
-          BODY="${BODY/RUN_ID/$RUN_ID}"
-
-          # Create the Issue
-          ISSUE_NUMBER=$(gh api repos/$OWNER/$REPO/issues -f title="$TITLE" -f body="$BODY" --jq '.number')
-
-          # Get GraphQL node id of the Issue
-          ISSUE_ID=$(gh api graphql -f query='
-            query($owner:String!, $name:String!, $num:Int!) {
-              repository(owner:$owner, name:$name) { issue(number:$num) { id } }
-            }' -F owner="$OWNER" -F name="$REPO" -F num="$ISSUE_NUMBER" \
-            --jq '.data.repository.issue.id')
-
-          # Assign Copilot to kick off the coding agent
-          gh api graphql -f query='
-            mutation($assignableId:ID!, $actorIds:[ID!]!) {
-              replaceActorsForAssignable(input:{assignableId:$assignableId, actorIds:$actorIds}) {
-                assignable { ... on Issue { number } }
-              }
-            }' -F assignableId="$ISSUE_ID" -F actorIds="[$COPILOT_ID]"
-
-          echo "Assigned Copilot to issue #$ISSUE_NUMBER — agent should start and open a draft PR."
+          gh agent-task create "
+          Analyze the latest failed workflow run (ID: ${RUN_ID}) for ${REPO}.
+          Goals:
+          - Download artifacts, read JUnit XML: cypress/reports/results-*.xml
+          - Cluster failures by spec and test title; identify root cause(s)
+          - Reproduce locally (npm ci; npm run cypress:run)
+          - Implement the smallest safe fix in code/tests
+          - Open a DRAFT PR from 'fix/agent-${RUN_ID}' with:
+            * RCA summary
+            * Files changed and rationale
+            * How I reproduced & how to run locally
+          Constraints: follow .github/copilot-instructions.md; no new secrets or external services."
