@@ -71,7 +71,6 @@ jobs:
           REPO: ${{ github.repository }}
           COPILOT_OAUTH_TOKEN: ${{ secrets.COPILOT_OAUTH_TOKEN }}
         run: |
-          set -e
           if [ -z "$COPILOT_OAUTH_TOKEN" ]; then
             echo "::error::COPILOT_OAUTH_TOKEN is empty. Add it in Settings → Secrets → Actions."; exit 1
           fi
