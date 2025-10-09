@@ -12,33 +12,45 @@ on:
 
 jobs:
   delegate:
+    # Only run when manually triggered OR the upstream workflow failed
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion != 'success' }}
-    runs-on: ubuntu-latest
+
+    # ▶️ Use a self-hosted runner that already has `gh auth login` persisted
+    runs-on: self-hosted
+
+    # Minimum needed perms for checking out, PR, etc.
     permissions:
       contents: write
       pull-requests: write
       actions: read
-      id-token: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 🔐 Authenticate gh with a user token (PAT FG or Classic)
-      - name: Authenticate gh (OAuth)
-        env:
-          COPILOT_OAUTH_TOKEN: ${{ secrets.COPILOT_OAUTH_TOKEN }}
+      # (Optional) Ensure GitHub CLI is available on the runner
+      - name: Ensure gh CLI is installed
+        run: |
+          if ! command -v gh >/dev/null 2>&1; then
+            echo "Installing GitHub CLI..."
+            type -p curl >/dev/null || sudo apt-get update
+            sudo apt-get install -y curl
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+          fi
+          gh --version
+
+      # ✅ Prove we are logged in with an OAuth session (no tokens in secrets)
+      - name: Verify gh auth (requires pre-authenticated runner)
         run: |
           set -e
-          if [ -z "$COPILOT_OAUTH_TOKEN" ]; then
-            echo "::error::COPILOT_OAUTH_TOKEN is empty. Add it in Settings → Secrets → Actions."; exit 1
+          if [ ! -f "$HOME/.config/gh/hosts.yml" ]; then
+            echo "::error::Runner is not pre-authenticated for gh. Run 'gh auth login' on this self-hosted runner (device/web flow) and re-run."
+            exit 1
           fi
-          echo "$COPILOT_OAUTH_TOKEN" | gh auth login --hostname github.com --with-token
-
-      # ✅ Prove we are logged in as a user (must say 'Logged in to github.com as <you>')
-      - name: Verify gh auth
-        run: |
-          gh --version
           gh auth status --hostname github.com
 
       # Auto mode: take run id from triggering event
@@ -69,14 +81,11 @@ jobs:
         env:
           RUN_ID: ${{ env.RUN_ID }}
           REPO: ${{ github.repository }}
-          COPILOT_OAUTH_TOKEN: ${{ secrets.COPILOT_OAUTH_TOKEN }}
         run: |
-          if [ -z "$COPILOT_OAUTH_TOKEN" ]; then
-            echo "::error::COPILOT_OAUTH_TOKEN is empty. Add it in Settings → Secrets → Actions."; exit 1
-          fi
-          echo "$COPILOT_OAUTH_TOKEN" | gh auth login --hostname github.com --with-token
-          echo "creating agent task"
+          set -e
+          echo "creating agent task for run ${RUN_ID} in ${REPO}"
           gh auth status
+
           gh agent-task create "
           Analyze the latest failed workflow run (ID: ${RUN_ID}) for ${REPO}.
           Goals:
