@@ -1,0 +1,221 @@
+name: Codex Auto-Fix (on e2e failure)
+
+on:
+  workflow_run:
+    workflows: ["e2e + TestRail"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "CI run ID to analyze (optional)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  codex-auto-fix:
+    # Run if manually triggered OR the upstream workflow failed
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_VERSION: "22"
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      # codex limits / safety rails
+      CODEX_FILE_INCLUDE: |
+        cypress/**
+        cypress.config.js
+        package.json
+        **/*.md
+      CODEX_FILE_EXCLUDE: |
+        **/*.png
+        **/*.mp4
+        **/node_modules/**
+        **/.github/**
+        .codex/**
+      # Upstream run metadata (populated differently per trigger type)
+      FAILED_RUN_ID: ${{ github.event.workflow_run.id }}
+      FAILED_RUN_URL: ${{ github.event.workflow_run.html_url }}
+      FAILED_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+      FAILED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+
+    steps:
+      - name: Validate OPENAI_API_KEY
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Missing OPENAI_API_KEY repo/org secret."; exit 1; fi
+
+      - name: Resolve run context for manual dispatch
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          INPUT_RUN_ID: ${{ github.event.inputs.run_id }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          if [ -n "$INPUT_RUN_ID" ]; then
+            echo "FAILED_RUN_ID=$INPUT_RUN_ID" >> $GITHUB_ENV
+          else
+            LATEST_FAILED=$(gh run list \
+              --workflow "e2e + TestRail" \
+              --json databaseId,conclusion,status \
+              -q '.[] | select(.conclusion=="failure" and .status=="completed") | .databaseId' \
+              | head -n1)
+            if [ -z "$LATEST_FAILED" ]; then
+              echo "::error::No failed 'e2e + TestRail' runs found."; exit 1
+            fi
+            echo "FAILED_RUN_ID=$LATEST_FAILED" >> $GITHUB_ENV
+          fi
+
+      - name: Download JUnit artifacts from failed run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ env.FAILED_RUN_ID }}
+          path: ./.failed-run-artifacts
+        continue-on-error: true
+
+      - name: Find JUnit XML (best-effort)
+        id: junit
+        run: |
+          shopt -s nullglob
+          files=(./.failed-run-artifacts/**/results-*.xml ./cypress/reports/results-*.xml)
+          if [ ${#files[@]} -gt 0 ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            printf "%s\n" "${files[@]}" > ./.junit-files.txt
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout failing SHA (if available) else default ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FAILED_HEAD_SHA || github.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      # ————————————————————————————————
+      # Run Codex to analyze & propose a minimal fix
+      # ————————————————————————————————
+      - name: Install Codex CLI (scoped)
+        run: npm i -g @openai/codex || (echo "::error::Failed to install Codex CLI" && exit 1)
+
+      - name: Prepare Codex prompt
+        run: |
+          mkdir -p .codex
+          cat > .codex/session.md <<'EOF'
+          {{PROMPT}}
+          EOF
+        env:
+          PROMPT: |
+            You are Codex working in this repo to fix failing Cypress tests.
+            Repository specifics:
+            - Node 22; install with `npm ci`.
+            - Run tests with `npm run cypress:run` (Cypress 15).
+            - JUnit XML is produced under `cypress/reports/results-*.xml`.
+            - Base URL: https://automationteststore.com
+            - Guidelines in `.github/copilot-instructions.md` and `AGENTS.md`.
+            - Keep diffs surgical. Prefer selector fixes, explicit waits (network/visibility), and minimal timeouts over refactors.
+            - Never hardcode secrets. Password is `Cypress.env('AUTOMATION_STORE_PASSWORD')`.
+            - Allowed change scope: files under `cypress/**`, `cypress.config.js`, `package.json`, and docs (`**/*.md`).
+
+            Tasks:
+            1) If `.junit-files.txt` exists, read it and parse all JUnit failures. Otherwise, run the test suite to reproduce.
+            2) Cluster failures by spec/test title; identify likely root cause(s).
+            3) Implement the SMALLEST safe fix. Explain each change in code comments where non-obvious.
+            4) Re-run `npm run cypress:run`. If still failing, iterate up to 2 times (total ≤ 3 runs).
+            5) Prepare a PR body section containing:
+               - Root Cause Analysis
+               - What changed & why
+               - Before/After repro steps
+               - Any trade-offs or follow-ups
+            Constraints:
+            - Do not change CI wiring or add services.
+            - Do not modify files outside allowed scope.
+            - Keep total diff ≤ 300 lines.
+            - Leave any flaky/slow notes in PR body instead of broad timeouts.
+
+      - name: Run Codex (workspace-scoped)
+        id: codex
+        env:
+          OPENAI_API_KEY: ${{ env.OPENAI_API_KEY }}
+        run: |
+          set -e
+          # Feed hints (artifact JUnit list) if present
+          if [ -f ./.junit-files.txt ]; then
+            echo "Discovered prior JUnit XML files:"
+            cat ./.junit-files.txt
+          fi
+
+          # Limit Codex visible files to safe globs
+          echo "$CODEX_FILE_INCLUDE" > .codex/include.txt
+          echo "$CODEX_FILE_EXCLUDE" > .codex/exclude.txt
+
+          # Sample CLI flow: analyze -> fix -> verify (loop controlled by prompt)
+          codex \
+            --model gpt-5-codex \
+            --include-from .codex/include.txt \
+            --exclude-from .codex/exclude.txt \
+            --max-diff-lines 300 \
+            --session .codex/session.md || true
+
+          # Capture a patch & a basic change summary
+          git diff > ./.codex/diff.patch || true
+          echo "changed=$(git status --porcelain | wc -l)" >> $GITHUB_OUTPUT
+
+      - name: If Codex produced changes, run tests
+        if: ${{ steps.codex.outputs.changed != '0' }}
+        run: |
+          npm run cypress:run
+        env:
+          CYPRESS_video: "false"
+          CYPRESS_screenshotOnRunFailure: "false"
+          # pass through INCLUDE_TAGS env already set in config if needed
+
+      - name: Collect artifacts (diff + logs + junit)
+        if: always()
+        run: |
+          mkdir -p ./.artifacts
+          cp -f ./.codex/diff.patch ./.artifacts/diff.patch 2>/dev/null || true
+          cp -f cypress/reports/results-*.xml ./.artifacts/ 2>/dev/null || true
+          # Save a terse git summary
+          git status --porcelain > ./.artifacts/git-status.txt || true
+          git diff --stat > ./.artifacts/diffstat.txt || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-auto-fix-${{ env.FAILED_RUN_ID || github.run_id }}
+          path: ./.artifacts
+
+      - name: Create DRAFT PR (if changes exist)
+        if: ${{ steps.codex.outputs.changed != '0' }}
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "fix(e2e): minimal Codex fixes for failing tests"
+          branch: codex/auto-fix-${{ env.FAILED_RUN_ID || github.run_id }}
+          base: ${{ env.FAILED_HEAD_BRANCH || github.ref_name }}
+          title: "Codex: auto-fix failing Cypress tests"
+          body: |
+            This draft PR was generated by **Codex** after a failure in:
+            - Run: ${{ env.FAILED_RUN_URL || format('{0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) }}
+            - Branch: `${{ env.FAILED_HEAD_BRANCH || github.ref_name }}`
+
+            ### Summary (from Codex)
+            See artifacts for diff patch and JUnit. The agent is instructed to keep changes surgical and within `cypress/**` + minimal config.
+
+            ### RCA / Changes / Repro
+            _Codex included its analysis and rationale in the commit messages and code comments. Please review before merging._
+
+          draft: true

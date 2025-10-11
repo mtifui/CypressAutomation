@@ -1,0 +1,24 @@
+# Default model & guardrails for local/CI Codex runs
+model = "gpt-5-codex"
+
+# Keep Codex in workspace only; no external shell unless needed by tests
+sandbox_mode = "workspace-write"
+
+# Change scope
+include = [
+  "cypress/**",
+  "cypress.config.js",
+  "package.json",
+  "**/*.md",
+]
+exclude = [
+  "**/node_modules/**",
+  "**/.github/**",
+  ".codex/**",
+  "**/*.png",
+  "**/*.mp4",
+]
+
+# Safety rails
+max_diff_lines = 300
+confirm_large_changes = true

@@ -12,3 +12,9 @@
 
 ## PR etiquette
 - Keep diffs small; include a failing-before/passing-after note in the PR body.
+
+## Codex auto-fix pipeline (CI)
+- Trigger: on failure of `e2e + TestRail` (or manual dispatch).
+- Scope: edit only `cypress/**`, `cypress.config.js`, `package.json`, and docs.
+- Guardrails: ≤300 diff lines; no secrets; minimal diffs.
+- Output: DRAFT PR with RCA + artifacts (diff patch, JUnit).
