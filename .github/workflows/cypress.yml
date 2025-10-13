@@ -35,7 +35,6 @@ jobs:
       - name: Run Cypress (JUnit only)
         run: npm run cypress:run
         env:
-          AUTOMATION_STORE_PASSWORD: ${{ secrets.AUTOMATION_STORE_PASSWORD }}
           CYPRESS_video: "false"
           CYPRESS_screenshotOnRunFailure: "false"
 
