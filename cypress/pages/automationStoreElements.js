@@ -19,18 +19,18 @@ export const accountPage = {
 
 export const createAccountPage = {
     pageTitle: "h1 span.maintext",
-    firstnameInput: "[data-test-id='search-dialog-input']",
-    lastnameInput: ":nth-child(2) > ._mizu194a",
-    emailInput: "div.form-group input[name='email']",
-    address1Input: "div.form-group input[name='address_1']",
-    cityInput: "div.form-group input[name='city']",
-    regionSelect: "div.form-group select[name='zone_id']",
-    zipCodeInput: "._yyhykb7n > :nth-child(1)",
-    countrySelect: "div.form-group select[name='country_id']",
-    loginNameInput: "div.form-group input[name='loginname']",
-    passwordInput: "div.form-group input[name='password']",
-    passwordConfirmInput: "div.form-group input[name='confirm']",
-    agreeToTermsCheckbox: "input[name='agree']",
+    firstnameInput: "#AccountFrm_firstname",
+    lastnameInput: "#AccountFrm_lastname",
+    emailInput: "#AccountFrm_email",
+    address1Input: "#AccountFrm_address_1",
+    cityInput: "#AccountFrm_city",
+    regionSelect: "#AccountFrm_zone_id",
+    zipCodeInput: "#AccountFrm_postcode",
+    countrySelect: "#AccountFrm_country_id",
+    loginNameInput: "#AccountFrm_loginname",
+    passwordInput: "#AccountFrm_password",
+    passwordConfirmInput: "#AccountFrm_confirm",
+    agreeToTermsCheckbox: "#AccountFrm_agree",
     continueButton: "button[title='Continue']"
 }
 
