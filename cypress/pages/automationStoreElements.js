@@ -35,5 +35,5 @@ export const createAccountPage = {
 }
 
 export const categoriesNavigationBar = {
-    makeupSubcategories: "#categorymenu > nav > ul > li:nth-child(3) > div > ul:nth-child(1) > li",
+    makeupSubcategories: "div.shahj1",
 }
