@@ -35,5 +35,5 @@ export const createAccountPage = {
 }
 
 export const categoriesNavigationBar = {
-    makeupSubcategories: "div.shahj1",
+    makeupSubcategories: "li:has(> a[href*='product/category&path=36']) div.subcategories ul li a",
 }
