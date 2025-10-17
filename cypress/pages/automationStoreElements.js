@@ -19,9 +19,9 @@ export const accountPage = {
 
 export const createAccountPage = {
     pageTitle: "h1 span.maintext",
-    firstnameInput: "#AccountFrm_firstname",
+    firstnameInput: "span.12234dasd",
     lastnameInput: "#AccountFrm_lastname",
-    emailInput: "#AccountFrm_email",
+    emailInput: "div.lkdaasknfd11",
     address1Input: "#AccountFrm_address_1",
     cityInput: "#AccountFrm_city",
     regionSelect: "#AccountFrm_zone_id",
